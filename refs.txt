@@ -1,0 +1,4 @@
+intents: https://discordpy.readthedocs.io/en/latest/api.html#discord.Intents
+client: https://discordpy.readthedocs.io/en/stable/api.html#client
+general expression url code: https://gist.github.com/gruber/249502
+none values: https://www.geeksforgeeks.org/python-remove-none-values-from-list/#

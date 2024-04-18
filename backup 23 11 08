@@ -1,0 +1,180 @@
+import discord
+from discord import app_commands
+import commands
+import keys
+import os
+import json
+
+def run_discord_bot():
+    TOKEN = keys.DISCORD_BOT_TOKEN
+    guild_id = keys.TEST_SERVER                      
+    intents = discord.Intents.default()                 #sets bot features (everything sans presences, members, message content)
+    intents.message_content = True                      #additional features - namely responsing to DMs                    
+    client = discord.Client(intents=intents)            #class of the bot itself
+    tree = discord.app_commands.CommandTree(client)
+
+                                                #Commands
+    @tree.command(name='hello', description='say hi!', guild=discord.Object(id=guild_id))
+    async def hello(interaction):
+        await interaction.response.send_message('hi!')
+
+    @tree.command(name='ping', description='relays the delay time between recieving and responding to commands',guild=discord.Object(id=guild_id))
+    async def ping(interaction):
+        await interaction.response.send_message(f'Pong!\n`Message took {client.latency} to send`')
+
+    @tree.command(name='roll', description='roll die, DND style',guild=discord.Object(id=995821619039715409))
+    async def roll(interaction, roll_data: str):
+        try:
+            roll_result = commands.roll_calc(roll_data)
+        except Exception as e:
+            roll_result = e
+        await interaction.response.send_message(f'You rolled a {roll_result}')
+
+    @tree.command(name='wordle', description='#buggy as hell/defunct: helps solve the daily wordle',guild=discord.Object(id=guild_id))
+    async def ping(interaction, wordle_guesses: str):
+        try:
+            wordle_solns = commands.wordle(wordle_guesses)
+        except Exception as e:
+            wordle_solns = e
+        await interaction.response.send_message(f'{wordle_solns}')
+
+    @tree.command(name="create_resource", description='Create a new list of resources - for updating, use update resource', guild=discord.Object(id=guild_id))
+    async def create_resource_list(interaction, resource_list_name: str, resource_list: str):
+        try:
+            with open('data/resource_list_list.txt','a') as table_of_contents:
+                table_of_contents.write(f'{resource_list_name}')
+                table_of_contents.close()
+            with open('data/resource_list.txt', 'a') as macro_list:
+                macro_list.write(f'\n{resource_list_name}\n')
+                macro_list.write(f'{resource_list}')
+                macro_list.write(f'\n;')
+                macro_list.close()
+            commands.resource_sort('data/resource_list.txt')
+            await interaction.response.send_message(f'Successfully saved {resource_list_name}!')
+        except Exception as e:
+            await interaction.response.send_message(f' There was a {e} error, please tell @AlanHol')
+            
+    @tree.command(name="resource", description='Display list of resources', guild=discord.Object(id=guild_id))
+    async def read_resource_list(interaction, resource_list_name: str = 'None'):
+        try:
+            if resource_list_name == 'None':
+                print('done detected')
+                with open('data/resource_list_list.txt','r') as table_of_contents:
+                    message = ''
+                    for line in table_of_contents:
+                        message += line
+                    table_of_contents.close()
+                    print(message)
+                await interaction.response.send_message(message)
+            else:
+                message = ''
+                in_list = False
+                with open('data/resource_list.txt', 'r') as macro_list:
+                    for line in macro_list:
+                        if line.strip() == resource_list_name: #break statement? stop checking this once the if statement is true once
+                            in_list = True
+                        if in_list and line.strip() !=";":
+                            message += line
+                        if in_list and line.strip() == ";":
+                            in_list = False
+                    macro_list.close()
+                if message == '':
+                    await interaction.response.send_message(f'List not found, check your spelling?')
+                else:    
+                    await interaction.response.send_message(message)
+        except Exception as e:
+            await interaction.response.send_message(f' There was a {e} error, please tell @AlanHol')
+
+    @tree.command(name="create_bookmark", description='create a new bookmark', guild=discord.Object(id=guild_id))
+    async def create_bookmark(interaction, book_name: str, page_number: int, private: bool):
+        try:
+            bookmark = f' `{private}` user:{interaction.id} {book_name}: page/chapter #:{page_number}'
+            with open('data/bookmark.txt','a') as list_of_bookmarks:
+                list_of_bookmarks.write(bookmark) #create dictionary
+            list_of_bookmarks.close()
+            await interaction.response.send_message(f'Created bookmark successfully')           
+        except Exception as e:
+            await interaction.response.send_message(f' There was a {e} error, please tell @AlanHol')
+
+    @tree.command(name="bookmark", description='checks current bookmark for a book, use * to check all', guild=discord.Object(id=guild_id))
+    async def bookmark(interaction):
+        with open('data/bookmark.txt', 'r') as list_of_bookmarks:
+            bookmarks = ""
+            for line in list_of_bookmarks:
+                bookmarks += line
+            list_of_bookmarks.close()
+        await interaction.response.send_message(f'{bookmarks}')           
+            
+    @tree.command(name="everyone", description='Pulls up the server @everyone list. Person at the top should be flogged and publicly shamed')
+    async def everyone(interaction):
+        local_server_id = interaction.guild.id
+        tier_list = commands.tier_list(local_server_id)
+        await interaction.response.send_message(f'{tier_list}')
+        
+    @tree.command(name="help", description='Display possible commands with a more comprehensive breakdown of usage', guild=discord.Object(id=guild_id))
+    async def help_desk(interaction):
+        message = ""
+        with open('data/help_desk.txt', 'r') as help_desk:
+            for line in help_desk:
+                message = message + line
+            help_desk.close()
+        await interaction.response.send_message(f'{message}')
+        
+                                                #Start up event
+    @client.event
+    async def on_ready():
+        await tree.sync(guild=discord.Object(id=guild_id)) #updates guild commands NOTE: global commands are not implemented
+        print(f'Logged in as {client.user} (ID: {client.user.id})')
+        print("Command Tree Synced and Ready!")
+        print('____________________________________')
+    @client.event
+    async def on_ready():
+
+            for guild in client.guilds:
+                if os.path.isfile(f'data/at_everyone_{guild.id}.json'):
+                    print('file found')
+                    pass
+                else:
+                    with open(f'data/at_everyone_{guild.id}.json','w') as at_everyone_initialization: 
+                        illegal_chess_move = '{"server_' + str(guild.id) + '": {'
+                        for member in guild.members:
+                            illegal_chess_move += '"user_' + str(member.id) + '" : {"user_id": ' + str(member.id) + ', "counter": 0 } '
+                        illegal_chess_move += '} }'
+
+                        print(illegal_chess_move)
+                        #json.dump(illegal_chess_move,at_everyone_initialization)
+                        at_everyone_initialization.write(illegal_chess_move)
+                        at_everyone_initialization.close()
+
+                    at_everyone_list = json.load(open(f'data/at_everyone_{guild.id}.json', 'r'))                 
+                    for server,server_users in at_everyone_list.items():
+                        print(f'this is the server: {server} containing the data:{server_users}')
+
+    
+                    for user,user_data in at_everyone_list[f'server_{guild.id}'].items():
+                        for member in guild.members:
+                            print(f'{user} is in the server. The data on hand for them is {user_data}')
+                            user_dictionary = dict(current_user = user_data)
+                            for user_data_key,user_data_value in user_dictionary['current_user'].items():
+                                print(f'{user_data_key} has a value of {user_data_value}')
+
+    @client.event
+    async def on_message(message):
+        if "@everyone" in message.content:
+            print('@everyone detected')
+            with open(f'data/at_everyone_{message.guild.id}.json','r') as at_everyone_counter: 
+                server_name= 'server_' + str(message.guild.id)
+                print(server_name)
+                y = json.load(at_everyone_counter)
+                y = dict(y)
+                print(y.keys)
+
+            #add a tally to the @everyone list based on message.author
+            # print(f'frick {message.author.id}')
+        else:
+            print("other message detected")
+
+    client.run(TOKEN) #actually runs the thing
+
+
+run_discord_bot()

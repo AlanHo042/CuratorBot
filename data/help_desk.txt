@@ -1,0 +1,6 @@
+/hello : do you are have stupid?
+/ping: sends a request to the bot's server and returns the time needed to recieve and reply to said request
+/roll:  '_'d'__' + '_' - rolls _ number of __ sided die with _ added proficency bonus. Everything save the die number can be excluded, i.e. /roll d20 or /roll 8d6 
+/wordle: takes at least one input, i.e. /wordle c#r#a#__, c#ar__, cr#_a_ - follow each green letter with a '#' and type yellow letters as is. Subsequent guess attempts (like c#ar__ and cr#_a_) will be used to remove invalid permutations involving already tried yellow letters. Does not support non-hardmode style guessing yet, i.e. guessing "train, close, umped" to narrow down letters. Very janky.
+/create_resource: creates a list that can be retrieved by the /resource command. Note the name of the list, otherwise it cannot be retrieved. Currently case sensitive.
+/resource retrieves a created list for ease of use.
